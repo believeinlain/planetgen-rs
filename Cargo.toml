@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+    "planetgen",
+    "run-wasm",
+]
+default-members = ["planetgen"]
