@@ -1,6 +1,9 @@
-pub mod lib;
+mod geometry;
+pub mod window;
 
 use winit::event_loop::EventLoop;
+
+use window::run;
 
 fn main() {
     let event_loop = EventLoop::new();
@@ -9,7 +12,7 @@ fn main() {
     {
         env_logger::init();
         // Temporarily avoid srgb formats for the swapchain on the web
-        pollster::block_on(lib::run(event_loop, window));
+        pollster::block_on(run(event_loop, window));
     }
     #[cfg(target_arch = "wasm32")]
     {
