@@ -3,10 +3,6 @@ use std::{array, cell::RefCell, rc::Rc};
 // wrapping coordinates in a RefCell allows vertices to move
 type MutScalar = RefCell<f32>;
 
-type VertIndex = usize;
-type EdgeIndex = usize;
-type FaceIndex = usize;
-
 #[derive(Debug, Default, Clone)]
 struct Vert {
     x: MutScalar,
@@ -42,29 +38,51 @@ struct Edge {
     endpoint: (Rc<Vert>, Rc<Vert>),
 }
 impl Edge {
-    pub fn new(vert_array: &[Rc<Vert>], endpoints: (VertIndex, VertIndex)) -> Self {
+    fn new(verts: &[Rc<Vert>], endpoints: (usize, usize)) -> Self {
         Edge {
-            endpoint: (
-                // cloning the Rc simply creates another reference
-                // to the same data
-                vert_array[endpoints.0].clone(),
-                vert_array[endpoints.1].clone(),
-            ),
+            endpoint: (verts[endpoints.0].clone(), verts[endpoints.1].clone()),
         }
     }
 }
 
 #[derive(Debug, Default)]
 struct Face {
-    corner: (VertIndex, VertIndex, VertIndex),
-    edge: (EdgeIndex, EdgeIndex, EdgeIndex),
+    corner: (Rc<Vert>, Rc<Vert>, Rc<Vert>),
+    edge: (Rc<Edge>, Rc<Edge>, Rc<Edge>),
+}
+impl Face {
+    fn new(
+        verts: &[Rc<Vert>],
+        edges: &[Rc<Edge>],
+        corners: (usize, usize, usize),
+        sides: (usize, usize, usize),
+    ) -> Self {
+        Face {
+            corner: (
+                verts[corners.0].clone(),
+                verts[corners.1].clone(),
+                verts[corners.2].clone(),
+            ),
+            edge: (
+                edges[sides.0].clone(),
+                edges[sides.1].clone(),
+                edges[sides.2].clone(),
+            ),
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Icosahedron {
     radius: f32,
     verts: [Rc<Vert>; 12],
     edges: [Rc<Edge>; 30],
+    faces: [Rc<Face>; 20],
+}
+impl Default for Icosahedron {
+    fn default() -> Self {
+        Icosahedron::new(5.0)
+    }
 }
 impl Icosahedron {
     fn new(radius: f32) -> Self {
@@ -144,10 +162,41 @@ impl Icosahedron {
             })
         });
 
+        // create array of faces
+        let faces = array::from_fn(|i| {
+            Rc::new(match i {
+                // top faces
+                0 => Face::new(&verts, &edges, (2, 1, 0), (0, 1, 5)),
+                1 => Face::new(&verts, &edges, (3, 2, 0), (1, 2, 6)),
+                2 => Face::new(&verts, &edges, (4, 3, 0), (2, 3, 7)),
+                3 => Face::new(&verts, &edges, (5, 4, 0), (3, 4, 8)),
+                4 => Face::new(&verts, &edges, (1, 5, 0), (4, 0, 9)),
+                // ring faces
+                5 => Face::new(&verts, &edges, (7, 6, 1), (20, 10, 11)),
+                6 => Face::new(&verts, &edges, (7, 1, 2), (5, 11, 12)),
+                7 => Face::new(&verts, &edges, (8, 7, 2), (21, 12, 13)),
+                8 => Face::new(&verts, &edges, (8, 2, 3), (6, 13, 14)),
+                9 => Face::new(&verts, &edges, (9, 8, 3), (22, 14, 15)),
+                10 => Face::new(&verts, &edges, (9, 3, 4), (7, 15, 16)),
+                11 => Face::new(&verts, &edges, (10, 9, 4), (23, 16, 17)),
+                12 => Face::new(&verts, &edges, (10, 4, 5), (8, 17, 18)),
+                13 => Face::new(&verts, &edges, (6, 10, 5), (24, 18, 19)),
+                14 => Face::new(&verts, &edges, (6, 5, 1), (9, 19, 10)),
+                // bottom faces
+                15 => Face::new(&verts, &edges, (6, 7, 11), (25, 26, 20)),
+                16 => Face::new(&verts, &edges, (7, 8, 11), (26, 27, 21)),
+                17 => Face::new(&verts, &edges, (8, 9, 11), (27, 28, 22)),
+                18 => Face::new(&verts, &edges, (9, 10, 11), (28, 29, 23)),
+                19 => Face::new(&verts, &edges, (10, 6, 11), (29, 25, 24)),
+                _ => panic!("Invalid number of faces for Icosahedron"),
+            })
+        });
+
         Icosahedron {
             radius,
             verts,
             edges,
+            faces,
         }
     }
 }
