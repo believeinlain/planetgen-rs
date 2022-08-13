@@ -7,6 +7,8 @@ use winit::event_loop::EventLoop;
 
 use window::run;
 
+pub type Result<T> = anyhow::Result<T>;
+
 fn main() {
     let event_loop = EventLoop::new();
     let window = winit::window::Window::new(&event_loop).unwrap();

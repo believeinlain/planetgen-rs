@@ -207,7 +207,8 @@ impl Icosahedron {
     pub fn get_vertex_buffer(&self) -> Vec<graphics::Vertex> {
         Vec::from_iter(self.verts.iter().map(|v| graphics::Vertex {
             position: [v.get_x(), v.get_y(), v.get_z()],
-            color: [1.0, 1.0, 1.0],
+            tex_coords: [0.0; 2],
+            color: [1.0; 3],
         }))
     }
     pub fn get_index_buffer(&self) -> Vec<graphics::Index> {
