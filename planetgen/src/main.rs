@@ -1,5 +1,6 @@
 #[allow(dead_code)]
 mod geometry;
+mod graphics;
 pub mod window;
 
 use winit::event_loop::EventLoop;

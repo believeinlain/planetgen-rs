@@ -1,23 +1,27 @@
 use std::{array, cell::RefCell, rc::Rc};
 
+use crate::graphics;
+
 // wrapping coordinates in a RefCell allows vertices to move
 type MutScalar = RefCell<f32>;
 
 #[derive(Debug, Default, Clone)]
 struct Vert {
+    index: usize,
     x: MutScalar,
     y: MutScalar,
     z: MutScalar,
 }
 impl Vert {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
+    pub fn new(index: usize, x: f32, y: f32, z: f32) -> Self {
         Vert {
+            index,
             x: MutScalar::new(x),
             y: MutScalar::new(y),
             z: MutScalar::new(z),
         }
     }
-    pub fn set(&self, x: f32, y: f32, z: f32) {
+    pub fn set_coords(&self, x: f32, y: f32, z: f32) {
         self.x.replace(x);
         self.y.replace(y);
         self.z.replace(z);
@@ -30,6 +34,18 @@ impl Vert {
     }
     pub fn set_z(&self, z: f32) {
         self.z.replace(z);
+    }
+    pub fn get_index(&self) -> usize {
+        self.index
+    }
+    pub fn get_x(&self) -> f32 {
+        *self.x.borrow()
+    }
+    pub fn get_y(&self) -> f32 {
+        *self.y.borrow()
+    }
+    pub fn get_z(&self) -> f32 {
+        *self.z.borrow()
     }
 }
 
@@ -100,17 +116,19 @@ impl Icosahedron {
 
                 match i {
                     // top
-                    0 => Vert::new(0.0, 0.0, radius),
+                    0 => Vert::new(i, 0.0, 0.0, radius),
                     // bottom
-                    11 => Vert::new(0.0, 0.0, -radius),
+                    11 => Vert::new(i, 0.0, 0.0, -radius),
                     // top ring [1..=5]
                     1..=5 => Vert::new(
+                        i,
                         top_ring_radius * ((i - 1) as f32 * 2.0 * long_angle).cos(),
                         top_ring_radius * ((i - 1) as f32 * 2.0 * long_angle).sin(),
                         top_ring_height,
                     ),
                     // bottom ring [6..=10]
                     6..=10 => Vert::new(
+                        i,
                         top_ring_radius * (((i - 6) as f32 * 2.0 - 1.0) * long_angle).cos(),
                         top_ring_radius * (((i - 6) as f32 * 2.0 - 1.0) * long_angle).sin(),
                         -top_ring_height,
@@ -198,5 +216,20 @@ impl Icosahedron {
             edges,
             faces,
         }
+    }
+    pub fn get_vertex_buffer(&self) -> Vec<graphics::Vertex> {
+        Vec::from_iter(self.verts.iter().map(|v| graphics::Vertex {
+            position: [v.get_x(), v.get_y(), v.get_z()],
+            color: [1.0, 1.0, 1.0],
+        }))
+    }
+    pub fn get_index_buffer(&self) -> Vec<graphics::Index> {
+        Vec::from_iter(self.faces.iter().flat_map(|f| {
+            [
+                f.corner.0.get_index() as graphics::Index,
+                f.corner.1.get_index() as graphics::Index,
+                f.corner.2.get_index() as graphics::Index,
+            ]
+        }))
     }
 }

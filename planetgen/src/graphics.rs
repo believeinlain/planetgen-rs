@@ -1,8 +1,8 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-struct Vertex {
-    position: [f32; 3],
-    color: [f32; 3],
+pub struct Vertex {
+    pub position: [f32; 3],
+    pub color: [f32; 3],
 }
 
-type Index = u16;
+pub type Index = u16;
