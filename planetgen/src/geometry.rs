@@ -106,14 +106,14 @@ impl Icosahedron {
                     0 => Vert::new(i, 0.0, 0.0, radius),
                     // bottom
                     11 => Vert::new(i, 0.0, 0.0, -radius),
-                    // top ring [1..=5]
+                    // top ring
                     1..=5 => Vert::new(
                         i,
                         top_ring_radius * ((i - 1) as f32 * 2.0 * long_angle).cos(),
                         top_ring_radius * ((i - 1) as f32 * 2.0 * long_angle).sin(),
                         top_ring_height,
                     ),
-                    // bottom ring [6..=10]
+                    // bottom ring
                     6..=10 => Vert::new(
                         i,
                         top_ring_radius * (((i - 6) as f32 * 2.0 - 1.0) * long_angle).cos(),
