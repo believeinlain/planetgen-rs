@@ -67,12 +67,7 @@ struct Face {
     edge: [Rc<Edge>; 3],
 }
 impl Face {
-    fn new(
-        verts: &[Rc<Vert>],
-        edges: &[Rc<Edge>],
-        corners: [usize; 3],
-        sides: [usize; 3],
-    ) -> Self {
+    fn new(verts: &[Rc<Vert>], edges: &[Rc<Edge>], corners: [usize; 3], sides: [usize; 3]) -> Self {
         Face {
             corner: corners.map(|i| verts[i].clone()),
             edge: sides.map(|i| edges[i].clone()),
@@ -216,8 +211,10 @@ impl Icosahedron {
         }))
     }
     pub fn get_index_buffer(&self) -> Vec<graphics::Index> {
-        Vec::from_iter(self.faces.iter().flat_map(|f|
-            f.corner.iter().map(|i| i.get_index() as graphics::Index)
-        ))
+        Vec::from_iter(
+            self.faces
+                .iter()
+                .flat_map(|f| f.corner.iter().map(|i| i.get_index() as graphics::Index)),
+        )
     }
 }
