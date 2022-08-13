@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 mod geometry;
 pub mod window;
 
