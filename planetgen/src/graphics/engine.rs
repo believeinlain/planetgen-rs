@@ -243,7 +243,7 @@ impl Engine {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None,//Some(wgpu::Face::Front),
+                cull_mode: None, //Some(wgpu::Face::Front),
                 // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
                 // or Features::POLYGON_MODE_POINT
                 polygon_mode: wgpu::PolygonMode::Fill,
@@ -283,7 +283,11 @@ impl Engine {
         let angle = time;
         let transform: [[f32; 4]; 4] =
             cgmath::Matrix4::from_angle_y(cgmath::Rad { 0: angle }).into();
-        self.queue.write_buffer(&self.transform_buffer, 0, bytemuck::cast_slice(&[transform]));
+        self.queue.write_buffer(
+            &self.transform_buffer,
+            0,
+            bytemuck::cast_slice(&[transform]),
+        );
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
