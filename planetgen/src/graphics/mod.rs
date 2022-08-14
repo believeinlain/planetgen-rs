@@ -1,3 +1,4 @@
+mod camera;
 pub mod engine;
 mod texture;
 

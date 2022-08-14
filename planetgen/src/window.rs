@@ -1,10 +1,9 @@
-
+use log;
 use winit::{
-    event::{Event, WindowEvent, KeyboardInput, VirtualKeyCode, ElementState},
+    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
-use log;
 
 use super::graphics::engine::Engine;
 
@@ -12,6 +11,7 @@ pub async fn run(event_loop: EventLoop<()>, window: Window) {
     // Engine::new uses async code, so we're going to wait for it to finish
     let mut engine = Engine::new(&window).await;
 
+    let time = std::time::Instant::now();
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::WindowEvent {
@@ -42,11 +42,13 @@ pub async fn run(event_loop: EventLoop<()>, window: Window) {
                 }
             }
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                // update
+                engine.update(time.elapsed().as_secs_f32());
                 match engine.render() {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => engine.reconfigure(),
+                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                        engine.reconfigure()
+                    }
                     // The system is out of memory, we should probably quit
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                     // We're ignoring timeouts

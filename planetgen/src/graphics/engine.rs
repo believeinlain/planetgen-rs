@@ -1,3 +1,4 @@
+use super::camera::{Camera, CameraUniform};
 use super::texture;
 use super::*;
 
@@ -12,9 +13,10 @@ pub struct Engine {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    #[allow(dead_code)]
-    diffuse_texture: texture::Texture,
     diffuse_bind_group: wgpu::BindGroup,
+    camera_bind_group: wgpu::BindGroup,
+    transform_buffer: wgpu::Buffer,
+    transform_bind_group: wgpu::BindGroup,
 }
 impl Engine {
     /// Initialize graphics engine.
@@ -115,10 +117,105 @@ impl Engine {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+        let num_indices = INDICES.len() as u32;
+
+        let camera = Camera {
+            // position the camera one unit up and 2 units back
+            // +z is out of the screen
+            eye: (0.0, 1.0, 2.0).into(),
+            // have it look at the origin
+            target: (0.0, 0.0, 0.0).into(),
+            // which way is "up"
+            up: cgmath::Vector3::unit_y(),
+            aspect: config.width as f32 / config.height as f32,
+            fovy: 45.0,
+            znear: 0.1,
+            zfar: 100.0,
+        };
+
+        let mut camera_uniform = CameraUniform::new();
+        camera_uniform.update_view_proj(&camera);
+
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("camera_bind_group_layout"),
+            });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+            label: Some("camera_bind_group"),
+        });
+
+        let transform_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("transform_bind_group_layout"),
+            });
+
+        let angle = 0.0;
+        let transform: [[f32; 4]; 4] =
+            cgmath::Matrix4::from_angle_y(cgmath::Rad { 0: angle }).into();
+        let transform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Transform Buffer"),
+            contents: bytemuck::cast_slice(&[transform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+        let transform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &transform_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: transform_buffer.as_entire_binding(),
+            }],
+            label: Some("transform_bind_group"),
+        });
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[
+                    &texture_bind_group_layout,
+                    &camera_bind_group_layout,
+                    &transform_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -146,7 +243,7 @@ impl Engine {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: None,//Some(wgpu::Face::Front),
                 // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
                 // or Features::POLYGON_MODE_POINT
                 polygon_mode: wgpu::PolygonMode::Fill,
@@ -166,18 +263,6 @@ impl Engine {
             multiview: None,
         });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-        let num_indices = INDICES.len() as u32;
-
         Engine {
             surface,
             config,
@@ -187,9 +272,18 @@ impl Engine {
             vertex_buffer,
             index_buffer,
             num_indices,
-            diffuse_texture,
             diffuse_bind_group,
+            camera_bind_group,
+            transform_buffer,
+            transform_bind_group,
         }
+    }
+
+    pub fn update(&mut self, time: f32) {
+        let angle = time;
+        let transform: [[f32; 4]; 4] =
+            cgmath::Matrix4::from_angle_y(cgmath::Rad { 0: angle }).into();
+        self.queue.write_buffer(&self.transform_buffer, 0, bytemuck::cast_slice(&[transform]));
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -225,6 +319,8 @@ impl Engine {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(2, &self.transform_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
@@ -235,7 +331,7 @@ impl Engine {
 
         Ok(())
     }
-    
+
     pub fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.config.width = width;
