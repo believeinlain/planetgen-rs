@@ -3,6 +3,8 @@ mod geometry;
 mod graphics;
 pub mod window;
 
+mod icosphere;
+
 use winit::event_loop::EventLoop;
 
 use window::run;
