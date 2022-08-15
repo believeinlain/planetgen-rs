@@ -1,17 +1,17 @@
 pub struct Camera {
-    pub eye: cgmath::Point3<f32>,
-    pub target: cgmath::Point3<f32>,
-    pub up: cgmath::Vector3<f32>,
+    pub eye: glam::Vec3,
+    pub target: glam::Vec3,
+    pub up: glam::Vec3,
     pub aspect: f32,
-    pub fovy: f32,
+    pub fov: f32,
     pub znear: f32,
     pub zfar: f32,
 }
 
 impl Camera {
-    fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
-        let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
+    fn build_view_projection_matrix(&self) -> glam::Mat4 {
+        let view = glam::Mat4::look_at_rh(self.eye, self.target, self.up);
+        let proj = glam::Mat4::perspective_rh(self.fov, self.aspect, self.znear, self.zfar);
 
         return proj * view;
     }
@@ -27,13 +27,12 @@ pub struct CameraUniform {
 
 impl CameraUniform {
     pub fn new() -> Self {
-        use cgmath::SquareMatrix;
         Self {
-            view_proj: cgmath::Matrix4::identity().into(),
+            view_proj: glam::Mat4::IDENTITY.to_cols_array_2d(),
         }
     }
 
     pub fn update_view_proj(&mut self, camera: &Camera) {
-        self.view_proj = camera.build_view_projection_matrix().into();
+        self.view_proj = camera.build_view_projection_matrix().to_cols_array_2d();
     }
 }

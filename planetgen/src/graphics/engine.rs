@@ -136,9 +136,9 @@ impl Engine {
             // have it look at the origin
             target: (0.0, 0.0, 0.0).into(),
             // which way is "up"
-            up: cgmath::Vector3::unit_y(),
+            up: glam::Vec3::Y,
             aspect: config.width as f32 / config.height as f32,
-            fovy: 45.0,
+            fov: f32::to_radians(45.0),
             znear: 0.1,
             zfar: 100.0,
         };
@@ -191,9 +191,7 @@ impl Engine {
                 label: Some("transform_bind_group_layout"),
             });
 
-        let angle = 0.0;
-        let transform: [[f32; 4]; 4] =
-            cgmath::Matrix4::from_angle_y(cgmath::Rad { 0: angle }).into();
+        let transform: [[f32; 4]; 4] = glam::Mat4::from_rotation_y(0.0).to_cols_array_2d();
         let transform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Transform Buffer"),
             contents: bytemuck::cast_slice(&[transform]),
@@ -281,8 +279,7 @@ impl Engine {
 
     pub fn update(&mut self, time: f32) {
         let angle = time;
-        let transform: [[f32; 4]; 4] =
-            cgmath::Matrix4::from_angle_y(cgmath::Rad { 0: angle }).into();
+        let transform: [[f32; 4]; 4] = glam::Mat4::from_rotation_y(angle).to_cols_array_2d();
         self.queue.write_buffer(
             &self.transform_buffer,
             0,
